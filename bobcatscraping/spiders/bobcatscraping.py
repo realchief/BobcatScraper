@@ -6,11 +6,12 @@ from lxml import html
 import scrapy
 from scrapy.item import Item, Field
 import re
-import json
 
 
 class SiteProductItem(Item):
-    category_info = Field()
+    product_name = Field()
+    images = Field()
+    feature = Field()
 
 
 class BobcatScraper (scrapy.Spider):
@@ -31,13 +32,16 @@ class BobcatScraper (scrapy.Spider):
 
     def parse_page(self, response):
 
-        category_info = []
+        bobcat = SiteProductItem()
         product_group_list = response.xpath('//a[contains(@class, "product-item")]')
         for product_group in product_group_list:
 
             product_name = None
             try:
-                product_name = product_group.xpath('.//h5/text()')[0].extract()
+
+                product_name = product_group.xpath(
+                    './/div[contains(@class, "h5 dtm-") and contains(@class, "-lst-name")]/text()')[0].extract()
+
             except:
                 pass
 
@@ -53,73 +57,10 @@ class BobcatScraper (scrapy.Spider):
             except:
                 pass
 
-            category_info.append({'product_name': product_name,
-                                 'product_image': product_image,
-                                 'product_feature': product_feature
-                                 })
-
-        bobcat = SiteProductItem()
-        bobcat['category_info'] = category_info
-
-        # meta = response.meta
-        # meta['bobcat'] = bobcat
-        return bobcat
-
-    #
-    # def parse_product(self, response):
-    #     product = SiteProductItem()
-    #
-    #     product_name = self._parse_name(response)
-    #     product['product_name'] = product_name
-    #
-    #     images = self._parse_images(response)
-    #     product['images'] = images
-    #
-    #     feature = self._parse_feature(response)
-    #     product['feature'] = feature
-    #
-    #     specification = self._parse_specification(response)
-    #     product['specification'] = specification
-    #
-    #     yield product
-    #
-    # @staticmethod
-    # def _parse_name(response):
-    #     title = response.xpath('//title/text()').extract()
-    #     return title[0].strip() if title else None
-    #
-    # def _parse_images(self, response):
-    #     images = []
-    #     asset_images = response.xpath('//div[@class="frameImg"]//img/@data-lazy').extract()
-    #     if asset_images:
-    #         for image in asset_images:
-    #             image = self.DOMAIN_URL + image
-    #             images.append(image)
-    #     return images
-    #
-    # @staticmethod
-    # def _parse_feature(response):
-    #     features = response.xpath('//div[contains(@id,"Features")]//a[contains(@class, "btn-gold")]//text()').extract()
-    #     return features
-    #
-    # def _parse_specification(self, response):
-    #     result = []
-    #     t_header = response.xpath('//table[contains(@class, "table-striped")]/thead/tr/th/text()').extract()
-    #     t_body = response.xpath('//table[contains(@class, "table-striped")]/div[contains(@class, "tablePar")]//tr').extract()
-    #     if len(t_header) > 0:
-    #         for body in t_body:
-    #             spec = {}
-    #             tree_body = html.fromstring(body)
-    #             spec_body_vals = tree_body.xpath('//tr/td/text()')
-    #
-    #             for i in range(0, len(t_header) - 1):
-    #                 spec_header = self._clean_text(t_header[i])
-    #                 if spec_body_vals:
-    #                     spec_body = self._clean_text(spec_body_vals[i])
-    #                     spec[spec_header] = spec_body
-    #             result.append(spec)
-    #     return result
-
+            bobcat['product_name'] = product_name
+            bobcat['images'] = product_image
+            bobcat['feature'] = product_feature
+            yield bobcat
 
     @staticmethod
     def _clean_text(text):
