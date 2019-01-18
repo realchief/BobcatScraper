@@ -10,8 +10,7 @@ import json
 
 
 class SiteProductItem(Item):
-    product_info = Field()
-    part_info = Field()
+    category_info = Field()
 
 
 class BobcatScraper (scrapy.Spider):
@@ -32,7 +31,7 @@ class BobcatScraper (scrapy.Spider):
 
     def parse_page(self, response):
 
-        product_info = []
+        category_info = []
         product_group_list = response.xpath('//a[contains(@class, "product-item")]')
         for product_group in product_group_list:
 
@@ -54,13 +53,13 @@ class BobcatScraper (scrapy.Spider):
             except:
                 pass
 
-            product_info.append({'product_name': product_name,
+            category_info.append({'product_name': product_name,
                                  'product_image': product_image,
                                  'product_feature': product_feature
                                  })
 
         bobcat = SiteProductItem()
-        bobcat['product_info'] = product_info
+        bobcat['category_info'] = category_info
 
         # meta = response.meta
         # meta['bobcat'] = bobcat
