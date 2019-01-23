@@ -9,9 +9,16 @@ import re
 
 
 class SiteProductItem(Item):
-    product_name = Field()
-    images = Field()
-    feature = Field()
+    Title = Field()
+    Images = Field()
+    Features = Field()
+    Category = Field()
+    SubCategory = Field()
+    Model = Field()
+    Description = Field()
+    Specification = Field()
+    PhotoVideoGallery = Field()
+    Attachments = Field()
 
 
 class BobcatScraper (scrapy.Spider):
@@ -33,6 +40,7 @@ class BobcatScraper (scrapy.Spider):
     def parse_page(self, response):
 
         bobcat = SiteProductItem()
+
         product_group_list = response.xpath('//a[contains(@class, "product-item")]')
         for product_group in product_group_list:
 
@@ -41,6 +49,48 @@ class BobcatScraper (scrapy.Spider):
 
                 product_name = product_group.xpath(
                     './/div[contains(@class, "h5 dtm-") and contains(@class, "-lst-name")]/text()')[0].extract()
+                product_name = str(product_name)
+                product_name_info = product_name.split(' ')
+                if 'Skid-Steer Loader' in product_name:
+                    category = 'Loader'
+                    subcategory = 'Skid-Steer'
+                    model = product_name_info[1]
+                elif 'All-Wheel Steer Loader' in product_name:
+                    category = 'Loader'
+                    subcategory = 'All-Wheel Steer'
+                    model = product_name_info[1]
+                elif 'Compact Track Loader' in product_name:
+                    category = 'Loader'
+                    subcategory = 'Compact Track'
+                    model = product_name_info[1]
+                elif 'Mini Track Loader' in product_name:
+                    category = 'Loader'
+                    subcategory = 'Mini Track'
+                    model = product_name_info[1]
+                elif 'Compact Excavator' in product_name:
+                    category = 'Compact Excavator'
+                    subcategory = ''
+                    model = product_name_info[1]
+                elif 'Utility Vehicle' in product_name:
+                    category = 'Utility Vehicle'
+                    subcategory = ''
+                    model = product_name_info[1]
+                elif 'Toolcat' in product_name:
+                    category = 'Toolcat'
+                    subcategory = ''
+                    model = product_name_info[1]
+                elif 'Telehandler' in product_name:
+                    category = 'Telehandler'
+                    subcategory = product_name_info[0]
+                    model = product_name_info[1]
+                elif 'Attachments' in product_name:
+                    category = 'Attachments'
+                    subcategory = product_name.replace(' Attachments', '')
+                    model = ''
+                else:
+                    category = None
+                    subcategory = None
+                    model = None
 
             except:
                 pass
@@ -57,9 +107,12 @@ class BobcatScraper (scrapy.Spider):
             except:
                 pass
 
-            bobcat['product_name'] = product_name
-            bobcat['images'] = product_image
-            bobcat['feature'] = product_feature
+            bobcat['Title'] = product_name
+            bobcat['Category'] = category
+            bobcat['SubCategory'] = subcategory
+            bobcat['Model'] = model
+            bobcat['Images'] = product_image
+            bobcat['Features'] = product_feature
             yield bobcat
 
     @staticmethod
