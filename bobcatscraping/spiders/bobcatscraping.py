@@ -201,13 +201,52 @@ class BobcatScraper (scrapy.Spider):
                 bobcat['Specification'] = self.parse_specification(specification_page, features_page)
             else:
                 bobcat['Specification'] = None
-            # bobcat['PhotoVideoGallery'] = self.parse_photovideogallery(photo_video_page)
-            # bobcat['Attachments'] = self.parse_attachments(attachments_page)
+            if photo_video_page:
+                bobcat['PhotoVideoGallery'] = self.parse_photovideogallery(photo_video_page)
+            else:
+                bobcat['PhotoVideoGallery'] = None
+
+            if features_page and attachments_page:
+                bobcat['Attachments'] = self.parse_attachments(attachments_page, features_page)
+            else:
+                bobcat['Attachments'] = None
+
             if product_name:
                 yield bobcat
 
             else:
                 continue
+
+    def parse_photovideogallery(self, photo_video_page):
+
+        photovideogallery = []
+        photovideogallery_page_content = requests.get(photo_video_page).content
+        try:
+            id = Selector(text=photovideogallery_page_content).xpath('//div[@class="iw_component"]')[3].attrib['id']
+            request_url = '{photo_video_page}?submit=true&iwPreActions=getItems&componentID' \
+                          '={id}&mainType=Media&CurrentLanguage=en-nao'.format(photo_video_page=photo_video_page, id=id)
+
+            item_json_list = requests.get(request_url).json()['items']
+            for item_json in item_json_list:
+                image_url = str(item_json['image'])
+                dcrname = str(item_json['dcrName'])
+                name = str(item_json['name'])
+                alt = str(item_json['alt'])
+                path = str(item_json['path'])
+                image_id = str(item_json['_id'])
+                json = {
+                    "url": image_url,
+                    "name": name,
+                    "path": path,
+                    "id": image_id,
+                    "dcrname": dcrname,
+                    "alt": alt,
+                }
+                photovideogallery.append(json)
+        except:
+            print photo_video_page
+            pass
+        return photovideogallery
 
     def parse_description(self, features_page):
         description = None
@@ -276,19 +315,72 @@ class BobcatScraper (scrapy.Spider):
                 travelSpeed = str(specification_values['travelSpeed']['$'])
             except:
                 travelSpeed = ''
+            try:
+                auxiliaryStdFlow = str(specification_values['auxiliaryStdFlow']['$'])
+            except:
+                auxiliaryStdFlow = ''
+            try:
+                engineShutdown = str(specification_values['engineShutdown']['$'])
+            except:
+                engineShutdown = ''
+            try:
+                fuelTank = str(specification_values['fuelTank']['$'])
+            except:
+                fuelTank = ''
+            try:
+                adjustableSeat = str(specification_values['adjustableSeat'])
+            except:
+                adjustableSeat = ''
+            try:
+                airConditioning = str(specification_values['airConditioning'])
+            except:
+                airConditioning = ''
+            try:
+                acsSwitchableControls = str(specification_values['acsSwitchableControls'])
+            except:
+                acsSwitchableControls = ''
+
 
             specification = {
-                'Horse Power': horse_power,
-                'Operating Weight': operating_weight,
-                'Engine Cooling': engine_cooling,
-                'Engine Fuel': engine_fuel,
-                'Emissions Tier(EPA)': epa,
-                'Rated Operating Capacity(SAE)': rated_OperatingCapacitySae,
-                'Tipping Load': tippingLoad,
-                'Travel Speed': travelSpeed
+                "Horse Power": horse_power,
+                "Operating Weight": operating_weight,
+                "Engine Cooling": engine_cooling,
+                "Engine Fuel": engine_fuel,
+                "Emissions Tier(EPA)": epa,
+                "Rated Operating Capacity(SAE)": rated_OperatingCapacitySae,
+                "Tipping Load": tippingLoad,
+                "Travel Speed": travelSpeed,
+                "Auxiliary Std Flow": auxiliaryStdFlow,
+                "Engine Shutdown": engineShutdown,
+                "Fuel Tank": fuelTank,
+                "Air Conditioning": airConditioning,
+                "ACS Switchable Controls": acsSwitchableControls,
+                "Adjustable Seat": adjustableSeat
             }
 
         return specification
+
+    def parse_attachments(self, attachments_page, features_page):
+        attachments = []
+        code = None
+        specification_page_content = requests.get(attachments_page).content
+        div_list = Selector(text=specification_page_content).xpath('//div[@class="col-sm-6"]')
+        for div in div_list:
+            features_link = div.xpath('./h4/a/@href').extract()
+            if features_link and (str(features_link[0]) == features_page):
+                code_element = div.xpath('..//div[@class="product-overview"]/@ng-if').extract()
+                if code_element:
+                    code = str(code_element[0].split("'")[1])
+            else:
+                continue
+        if code:
+            request_url = 'https://cdn-proxy-gpim-com.dibhids.net/rest/proxy/globalpim/rest/enhancedProduct/catalog' \
+                          '/CompactNA/version/Online/product/{code}?locale=en&i=12315&'.format(code=code)
+            attachments_value_list = requests.get(request_url).json()['compatibleAttachments']['cAProductLink']
+            for attachments_value in attachments_value_list:
+                attachment = str(attachments_value['$'])
+                attachments.append(attachment)
+        return attachments
 
     @staticmethod
     def _clean_text(text):
