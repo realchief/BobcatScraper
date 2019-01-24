@@ -47,8 +47,8 @@ class BobcatScraper (scrapy.Spider):
             product_name = None
             category = None
             subcategory = None
-            specification_page = ''
-            features_page = ''
+            specification_page = None
+            features_page = None
 
             try:
 
@@ -72,7 +72,7 @@ class BobcatScraper (scrapy.Spider):
                     attachments_page = more_link.format(category="loaders", subcategory="skid-steer-loaders", model=model.lower(),
                                                      field="attachments-accessories")
 
-                elif 'Compact Track Loader' in product_name and ('Attachments' not in product_name):
+                elif ('Compact Track Loader' in product_name) and ('Attachments' not in product_name):
                     category = 'Loaders'
                     subcategory = 'Compact Track'
                     model = product_name_info[1]
@@ -89,7 +89,7 @@ class BobcatScraper (scrapy.Spider):
                                                         model=model.lower(),
                                                         field="attachments-accessories")
 
-                elif 'Mini Track Loader' in product_name and ('Attachments' not in product_name):
+                elif ('Mini Track Loader' in product_name) and ('Attachments' not in product_name):
                     category = 'Loaders'
                     subcategory = 'Mini Track'
                     model = product_name_info[1]
@@ -106,7 +106,7 @@ class BobcatScraper (scrapy.Spider):
                                                         model=model.lower(),
                                                         field="attachments-accessories")
 
-                elif 'Compact Excavator' in product_name and ('Attachments' not in product_name):
+                elif ('Compact Excavator' in product_name) and ('Attachments' not in product_name):
                     category = 'Compact Excavators'
                     subcategory = ''
                     model = product_name_info[1]
@@ -120,7 +120,7 @@ class BobcatScraper (scrapy.Spider):
                     attachments_page = 'https://www.bobcat.com/excavators/models/{model}/attachments-accessories'.format(
                         model=model.lower())
 
-                elif 'Utility Vehicle' in product_name and ('Attachments' not in product_name):
+                elif ('Utility Vehicle' in product_name) and ('Attachments' not in product_name):
                     category = 'Utility Vehicles'
                     subcategory = ''
                     model = product_name_info[1]
@@ -135,7 +135,7 @@ class BobcatScraper (scrapy.Spider):
                                                         field="photos-videos")
                     attachments_page = None
 
-                elif 'Toolcat' in product_name and ('Attachments' not in product_name):
+                elif ('Toolcat' in product_name) and ('Attachments' not in product_name):
                     category = 'Toolcats'
                     subcategory = ''
                     model = product_name_info[1]
@@ -149,7 +149,7 @@ class BobcatScraper (scrapy.Spider):
                     attachments_page = 'https://www.bobcat.com/loaders/skid-steer-loaders/models/{model}/attachments-accessories'.format(
                         model=model.lower())
 
-                elif 'Telehandler' in product_name and ('Attachments' not in product_name):
+                elif ('Telehandler' in product_name) and ('Attachments' not in product_name):
                     category = 'Telehandlers'
                     subcategory = product_name_info[0]
                     model = product_name_info[1]
@@ -164,11 +164,14 @@ class BobcatScraper (scrapy.Spider):
                         model=model.lower())
 
                 else:
+                    product_name = None
                     category = None
                     subcategory = None
+                    specification_page = None
+                    features_page = None
 
             except:
-                pass
+                continue
 
             product_image = None
             try:
@@ -187,25 +190,41 @@ class BobcatScraper (scrapy.Spider):
             bobcat['SubCategory'] = str(subcategory)
             bobcat['Images'] = str(product_image)
             bobcat['Features'] = str(product_feature)
-            bobcat['Model'] = self.parse_model(features_page)
-            bobcat['Description'] = self.parse_description(features_page)
-            bobcat['Specification'] = self.parse_specification(specification_page, features_page)
+            if features_page:
+                bobcat['Model'] = self.parse_model(features_page)
+                bobcat['Description'] = self.parse_description(features_page)
+            else:
+                bobcat['Model'] = ""
+                bobcat['Description'] = ""
+
+            if features_page and specification_page:
+                bobcat['Specification'] = self.parse_specification(specification_page, features_page)
+            else:
+                bobcat['Specification'] = None
             # bobcat['PhotoVideoGallery'] = self.parse_photovideogallery(photo_video_page)
             # bobcat['Attachments'] = self.parse_attachments(attachments_page)
             if product_name:
                 yield bobcat
 
             else:
-                pass
+                continue
 
     def parse_description(self, features_page):
-        features_page_content = requests.get(features_page).content
-        description = Selector(text=features_page_content).xpath('//div[@class="col-xs-12"]/p/text()').extract()
+        description = None
+        try:
+            features_page_content = requests.get(features_page).content
+            description = Selector(text=features_page_content).xpath('//div[@class="col-xs-12"]/p/text()').extract()
+        except:
+            print features_page
         return description[0] if description else ""
 
     def parse_model(self, features_page):
-        features_page_content = requests.get(features_page).content
-        model = Selector(text=features_page_content).xpath('//div[@class="col-xs-12"]/h1/text()').extract()
+        model = None
+        try:
+            features_page_content = requests.get(features_page).content
+            model = Selector(text=features_page_content).xpath('//div[@class="col-xs-12"]/h1/text()').extract()
+        except:
+            print features_page
         return model[0] if model else ""
 
     def parse_specification(self, specification_page, features_page):
